@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Let Me JW That For You</title>
+<meta name="description" content="Type a term, get a link. Send it to someone who won't search for themselves.">
+<style>
+  :root {
+    --blue: #1a5276;
+    --blue-dark: #10344a;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #1c1c1c;
+    --muted: #6b7280;
+    --accent: #2e86c1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ---------- Generator view ---------- */
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+    padding: 36px 32px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .card h1 {
+    font-size: 24px;
+    margin: 0 0 6px;
+    color: var(--blue-dark);
+  }
+  .card p.sub {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1.5px solid #d7dce1;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button {
+    margin-top: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--blue);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: var(--blue-dark); }
+  .result {
+    margin-top: 22px;
+    display: none;
+  }
+  .result.show { display: block; }
+  .link-row {
+    display: flex;
+    gap: 8px;
+  }
+  .link-row input {
+    flex: 1;
+    font-size: 13px;
+    color: var(--blue-dark);
+    background: #f0f3f5;
+  }
+  .link-row button {
+    margin-top: 0;
+    width: auto;
+    white-space: nowrap;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  .copied-msg {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #1e8449;
+    height: 14px;
+  }
+  .footnote {
+    margin-top: 20px;
+    font-size: 11px;
+    color: #b0b6bb;
+    text-align: center;
+  }
+
+  /* ---------- Player view ---------- */
+  .player {
+    display: none;
+    width: 100%;
+    max-width: 560px;
+  }
+  .player.show { display: block; }
+  .browser-frame {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .browser-bar {
+    background: #e9ecef;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .browser-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .browser-url {
+    flex: 1;
+    margin-left: 8px;
+    background: #fff;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .site-body {
+    padding: 48px 36px 56px;
+    text-align: center;
+  }
+  .site-logo {
+    font-size: 15px;
+    letter-spacing: .5px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid #d7dce1;
+    border-radius: 999px;
+    padding: 12px 20px;
+    max-width: 420px;
+    margin: 0 auto;
+    background: #fff;
+  }
+  .search-box svg {
+    flex-shrink: 0;
+    margin-right: 10px;
+  }
+  #typed-text {
+    font-size: 16px;
+    color: var(--text);
+    text-align: left;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 18px;
+    background: var(--blue);
+    margin-left: 1px;
+    vertical-align: middle;
+    animation: blink 0.9s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .reveal {
+    display: none;
+    margin-top: 34px;
+  }
+  .reveal.show { display: block; animation: fadein .4s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+  .reveal h2 {
+    font-size: 20px;
+    color: var(--blue-dark);
+    margin: 0 0 8px;
+  }
+  .reveal p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 4px;
+  }
+  .reveal .redirect-note {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #b0b6bb;
+  }
+  .reveal a.now-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .reveal a.now-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+  <!-- Generator: shown when there's no ?q= term -->
+  <div class="card" id="generator">
+    <h1>Let Me JW That For You</h1>
+    <p class="sub">Type in whatever the other person should have just looked up themselves. You'll get a link &mdash; send it to them.</p>
+
+    <label for="term-input">Search term</label>
+    <input type="text" id="term-input" placeholder="e.g. baptism requirements" autocomplete="off">
+    <button id="generate-btn">Generate link</button>
+
+    <div class="result" id="result">
+      <label for="link-output">Send this</label>
+      <div class="link-row">
+        <input type="text" id="link-output" readonly>
+        <button id="copy-btn">Copy</button>
+      </div>
+      <div class="copied-msg" id="copied-msg"></div>
+    </div>
+
+    <div class="footnote">Nothing is stored. The term only ever lives in the link itself.</div>
+  </div>
+
+  <!-- Player: shown when a ?q= term is present in the URL -->
+  <div class="player" id="player">
+    <div class="browser-frame">
+      <div class="browser-bar">
+        <span class="browser-dot dot-r"></span>
+        <span class="browser-dot dot-y"></span>
+        <span class="browser-dot dot-g"></span>
+        <span class="browser-url" id="fake-url">jw.org</span>
+      </div>
+      <div class="site-body">
+        <div class="site-logo">jw.org</div>
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span id="typed-text"></span><span class="cursor"></span>
+        </div>
+
+        <div class="reveal" id="reveal">
+          <h2>See how easy that was?</h2>
+          <p>That's all it took.</p>
+          <p class="redirect-note">Taking you to the real results now &mdash; or <a href="#" class="now-link" id="now-link">go now</a>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var q = params.get('q');
+
+  function buildResultUrl(term) {
+    return 'https://www.jw.org/en/search/?q=' + encodeURIComponent(term);
+  }
+
+  if (q && q.trim().length > 0) {
+    runPlayer(q.trim());
+  } else {
+    runGenerator();
+  }
+
+  function runGenerator() {
+    document.getElementById('generator').style.display = 'block';
+
+    var input = document.getElementById('term-input');
+    var genBtn = document.getElementById('generate-btn');
+    var resultBox = document.getElementById('result');
+    var linkOutput = document.getElementById('link-output');
+    var copyBtn = document.getElementById('copy-btn');
+    var copiedMsg = document.getElementById('copied-msg');
+
+    function generate() {
+      var term = input.value.trim();
+      if (!term) { input.focus(); return; }
+      var base = window.location.origin + window.location.pathname;
+      var link = base + '?q=' + encodeURIComponent(term);
+      linkOutput.value = link;
+      resultBox.classList.add('show');
+      copiedMsg.textContent = '';
+    }
+
+    genBtn.addEventListener('click', generate);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') generate();
+    });
+
+    copyBtn.addEventListener('click', function () {
+      linkOutput.select();
+      linkOutput.setSelectionRange(0, 99999);
+      var done = function () {
+        copiedMsg.textContent = 'Copied.';
+        setTimeout(function () { copiedMsg.textContent = ''; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(linkOutput.value).then(done).catch(function () {
+          document.execCommand('copy'); done();
+        });
+      } else {
+        document.execCommand('copy'); done();
+      }
+    });
+  }
+
+  function runPlayer(term) {
+    document.getElementById('player').classList.add('show');
+
+    var typedEl = document.getElementById('typed-text');
+    var fakeUrl = document.getElementById('fake-url');
+    var reveal = document.getElementById('reveal');
+    var nowLink = document.getElementById('now-link');
+    var resultUrl = buildResultUrl(term);
+    nowLink.href = resultUrl;
+
+    fakeUrl.textContent = 'jw.org/en/search/?q=' + term.toLowerCase().replace(/\s+/g, '+');
+
+    var i = 0;
+    var speed = 55; // ms per character
+
+    function typeNext() {
+      if (i <= term.length) {
+        typedEl.textContent = term.slice(0, i);
+        i++;
+        setTimeout(typeNext, speed);
+      } else {
+        setTimeout(showReveal, 500);
+      }
+    }
+
+    function showReveal() {
+      reveal.classList.add('show');
+      setTimeout(function () {
+        window.location.href = resultUrl;
+      }, 2500);
+    }
+
+    // small delay before typing starts so the page doesn't feel instant
+    setTimeout(typeNext, 400);
+  }
+})();
+</script>
+</body>
+</html>
