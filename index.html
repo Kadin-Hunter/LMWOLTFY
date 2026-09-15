@@ -3,8 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Let Me JW That For You</title>
+<title>LMJWTFY</title>
 <meta name="description" content="Type a term, get a link. Send it to someone who won't search for themselves.">
+<meta property="og:title" content="LMJWTFY">
+<meta property="og:description" content="Type a term, get a link. Send it to someone who won't search for themselves.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <style>
   :root {
     --blue: #1a5276;
@@ -160,6 +166,57 @@
   .site-body {
     padding: 48px 36px 56px;
     text-align: center;
+    position: relative;
+  }
+  .fake-cursor {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+    transition: left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1), opacity .25s ease;
+  }
+  .fake-cursor svg {
+    display: block;
+    transform-origin: 4px 3px;
+  }
+  .fake-cursor.clicking svg {
+    animation: cursor-click .3s ease;
+  }
+  @keyframes cursor-click {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.7); }
+    100% { transform: scale(1); }
+  }
+  .click-burst {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 45;
+  }
+  .click-burst-arm {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+  }
+  .click-burst-line {
+    position: absolute;
+    left: 6px;
+    top: -1px;
+    width: 9px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: burst-line .45s ease-out forwards;
+  }
+  @keyframes burst-line {
+    0% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(13px); }
   }
   .search-title {
     font-size: 26px;
@@ -293,6 +350,11 @@
         <span class="browser-url" id="fake-url">jw.org</span>
       </div>
       <div class="site-body">
+        <div class="fake-cursor" id="fake-cursor">
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <path d="M4 2 L4 18 L8.5 14.5 L11.5 21 L14 20 L11 13.5 L18 13.5 Z" fill="#1c1c1c" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <h1 class="search-title">Search JW.ORG</h1>
         <div class="search-row">
           <div class="search-input-fake">
@@ -388,6 +450,41 @@
 
     fakeUrl.textContent = 'jw.org/en/search/?q=' + term.toLowerCase().replace(/\s+/g, '+');
 
+    var siteBody = document.querySelector('.site-body');
+    var cursor = document.getElementById('fake-cursor');
+    var inputField = document.querySelector('.search-input-fake');
+    var searchBtn = document.querySelector('.search-btn-fake');
+    var MOVE_MS = 550;
+
+    function pointFor(el) {
+      var r = el.getBoundingClientRect();
+      var pr = siteBody.getBoundingClientRect();
+      return { x: r.left - pr.left + r.width / 2, y: r.top - pr.top + r.height / 2 };
+    }
+
+    function placeCursor(x, y) {
+      cursor.style.left = (x - 4) + 'px';
+      cursor.style.top = (y - 3) + 'px';
+    }
+
+    // moves the cursor to el, then calls callback once the move finishes
+    function moveCursorTo(el, callback) {
+      var p = pointFor(el);
+      placeCursor(p.x, p.y);
+      setTimeout(callback, MOVE_MS);
+    }
+
+    // plays the click animation + line burst on el, then calls callback
+    function clickAt(el, callback) {
+      var p = pointFor(el);
+      spawnBurst(siteBody, p.x, p.y);
+      cursor.classList.add('clicking');
+      setTimeout(function () {
+        cursor.classList.remove('clicking');
+        if (callback) callback();
+      }, 300);
+    }
+
     var i = 0;
     var speed = 400; // ms per character (2.5 chars/sec)
 
@@ -397,11 +494,15 @@
         i++;
         setTimeout(typeNext, speed);
       } else {
-        // confetti + reveal fire together, 1 second after typing finishes
         setTimeout(function () {
-          fireConfetti();
-          showReveal();
-        }, 1000);
+          moveCursorTo(searchBtn, function () {
+            clickAt(searchBtn, function () {
+              cursor.style.opacity = '0';
+              fireConfetti();
+              showReveal();
+            });
+          });
+        }, 300);
       }
     }
 
@@ -412,8 +513,35 @@
       }, 2500);
     }
 
-    // small delay before typing starts so the page doesn't feel instant
-    setTimeout(typeNext, 400);
+    // entrance: cursor fades in, moves to the search field, clicks it, then typing starts
+    var startX = siteBody.getBoundingClientRect().width - 30;
+    placeCursor(startX, 26);
+    setTimeout(function () {
+      cursor.style.opacity = '1';
+      moveCursorTo(inputField, function () {
+        clickAt(inputField, function () {
+          setTimeout(typeNext, 250);
+        });
+      });
+    }, 350);
+  }
+
+  function spawnBurst(container, x, y) {
+    var burst = document.createElement('div');
+    burst.className = 'click-burst';
+    burst.style.left = x + 'px';
+    burst.style.top = y + 'px';
+    for (var i = 0; i < 8; i++) {
+      var arm = document.createElement('div');
+      arm.className = 'click-burst-arm';
+      arm.style.transform = 'rotate(' + (i * 45) + 'deg)';
+      var line = document.createElement('span');
+      line.className = 'click-burst-line';
+      arm.appendChild(line);
+      burst.appendChild(arm);
+    }
+    container.appendChild(burst);
+    setTimeout(function () { burst.remove(); }, 500);
   }
 
   function fireConfetti() {
